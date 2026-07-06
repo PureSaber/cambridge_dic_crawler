@@ -1,0 +1,132 @@
+# Cambridge Dictionary Crawler
+
+A Python crawler for the [Cambridge English-Chinese (Simplified) Dictionary](https://dictionary.cambridge.org/dictionary/english-chinese-simplified/). It fetches word entries with `requests`, parses HTML with `BeautifulSoup`, and exports structured data to CSV and JSON.
+
+## Features
+
+- Extract IPA (UK/US), part of speech, English definitions, Chinese definitions, and example sentences
+- Preserve the original entry hierarchy (`entries` → `senses` → `examples`)
+- Support regular entries, idioms (`idiom-block`), and phrase templates (`phrase-di-block`)
+- Random delays, rotating User-Agent headers, HTTP retries, and robots.txt checks
+- Structured logging with rotating log files (`logs/crawler.log`, `logs/error_log.txt`)
+- Per-field try-except parsing; failed words are logged with reasons
+- Multiple input sources: CLI words, text/JSON files, web page URLs, or full browse index
+- Bulk crawl with word discovery, checkpoint resume, and incremental export
+- CLI-tunable rate limits (`--sleep-min`, `--sleep-max`, `--retries`)
+
+## Installation
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # macOS/Linux
+pip install -r requirements.txt
+
+# Optional: development dependencies (pytest)
+pip install -r requirements-dev.txt
+```
+
+If PowerShell blocks `activate`, run commands with `.venv\Scripts\python` directly.
+
+## Usage
+
+### Look up specific words
+
+```bash
+python main.py industrial engineering
+python main.py -f words.txt
+python main.py -f words.json
+python main.py -u "https://dictionary.cambridge.org/dictionary/english-chinese-simplified/hello"
+python main.py -f words.txt -o output/result.csv
+```
+
+### Bulk crawl (all words)
+
+```bash
+# Step 1: discover word list -> cache/word_list.json
+python main.py --discover-only --all
+
+# Step 2: crawl using cached list (supports resume)
+python main.py --all --use-cache --resume
+
+# One-shot discover + crawl
+python main.py --all
+
+# Limit scope for testing
+python main.py --all --letters a,b --limit 100
+```
+
+### Rate limiting, concurrency, and reliability
+
+```bash
+python main.py hello --sleep-min 2 --sleep-max 5 --retries 5 --log-level DEBUG
+python main.py -f words.txt -w 4          # 4 concurrent workers (max 8)
+python main.py --all --use-cache --save-every 20
+python main.py hello --download-audio       # save MP3 to output/audio/
+python main.py hello --no-robots-check      # skip robots.txt check (not recommended)
+```
+
+**Concurrency note:** Each worker still applies random delays. Higher `--workers` speeds up bulk crawls but increases ban risk — use with care.
+
+## Output
+
+| File | Description |
+|------|-------------|
+| `output/output.csv` | Default flat export for normal runs |
+| `output/output.json` | Full nested structure for normal runs |
+| `output/bulk_output.csv` | Flat export for `--all` runs |
+| `output/bulk_output.json` | Nested export for `--all` runs |
+| `output/audio/` | Downloaded pronunciation MP3 files (`--download-audio`) |
+| `cache/word_list.json` | Discovered headwords |
+| `cache/checkpoint.json` | Bulk crawl progress |
+| `logs/crawler.log` | Rotating application log |
+| `logs/error_log.txt` | Rotating warning/error log |
+
+### CSV columns
+
+`word`, `url`, `pos`, `ipa_uk`, `ipa_us`, `audio_uk`, `audio_us`, `sense_index`, `guideword`, `cefr`, `english_definitions`, `chinese_definitions`, `examples`
+
+## Project layout
+
+```
+cambridge_dic_crawler/
+├── main.py
+├── words.txt
+├── requirements.txt
+├── requirements-dev.txt
+├── src/
+│   ├── config.py           # Constants and paths
+│   ├── runtime_settings.py # CLI-overridable settings
+│   ├── logging_config.py   # Logging setup
+│   ├── robots.py           # robots.txt check
+│   ├── fetcher.py          # HTTP + retries
+│   ├── parser.py           # HTML parsing
+│   ├── input_loader.py     # Input sources
+│   ├── word_discovery.py   # Browse index discovery
+│   ├── crawler.py          # Crawl orchestration
+│   ├── checkpoint.py       # Resume support
+│   ├── audio_downloader.py # Optional MP3 download
+│   └── exporter.py         # CSV/JSON export
+├── tests/
+│   ├── fixtures/
+│   ├── test_parser.py
+│   ├── test_word_discovery.py
+│   └── test_fetcher.py
+├── output/
+├── cache/
+└── logs/
+```
+
+## Testing
+
+```bash
+pytest
+```
+
+## Disclaimer
+
+This project is for educational purposes. Please respect [Cambridge Dictionary](https://dictionary.cambridge.org/) terms of use and robots rules. Use reasonable request delays and avoid high-frequency bulk scraping.
+
+## License
+
+MIT

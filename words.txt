@@ -1,0 +1,4 @@
+# Sample word list for Cambridge Dictionary crawler
+industrial
+engineering
+hello
