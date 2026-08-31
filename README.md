@@ -4,7 +4,7 @@ A Python crawler for the [Cambridge English-Chinese (Simplified) Dictionary](htt
 
 ## Features
 
-- Extract IPA (UK/US), part of speech, English definitions, Chinese definitions, and example sentences
+- Extract canonical display headwords, IPA (UK/US), part of speech, English definitions, Chinese definitions, and example sentences
 - Preserve the original entry hierarchy (`entries` → `senses` → `examples`)
 - Support regular entries, idioms (`idiom-block`), and phrase templates (`phrase-di-block`)
 - Random delays, rotating User-Agent headers, HTTP retries, and robots.txt checks
@@ -84,7 +84,10 @@ python main.py hello --no-robots-check      # skip robots.txt check (not recomme
 
 ### CSV columns
 
-`word`, `url`, `pos`, `ipa_uk`, `ipa_us`, `audio_uk`, `audio_us`, `sense_index`, `guideword`, `cefr`, `english_definitions`, `chinese_definitions`, `examples`
+`word`, `display_word`, `url`, `pos`, `ipa_uk`, `ipa_us`, `audio_uk`, `audio_us`, `sense_index`, `guideword`, `cefr`, `english_definitions`, `chinese_definitions`, `examples`
+
+`word` remains the stable Cambridge URL slug. `display_word` preserves the visible
+dictionary headword, including separators such as `may/might as well`.
 
 ## Project layout
 

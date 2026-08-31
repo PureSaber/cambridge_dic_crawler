@@ -17,6 +17,7 @@ def to_dataframe(results: list[dict[str, Any]]) -> pd.DataFrame:
 
     for result in results:
         word = result.get("word", "")
+        display_word = result.get("display_word", word.replace("-", " "))
         url = result.get("url", "")
 
         for entry in result.get("entries", []):
@@ -30,6 +31,7 @@ def to_dataframe(results: list[dict[str, Any]]) -> pd.DataFrame:
                 rows.append(
                     {
                         "word": word,
+                        "display_word": display_word,
                         "url": url,
                         "pos": pos,
                         "ipa_uk": ipa_uk,
@@ -49,6 +51,7 @@ def to_dataframe(results: list[dict[str, Any]]) -> pd.DataFrame:
         return pd.DataFrame(
             columns=[
                 "word",
+                "display_word",
                 "url",
                 "pos",
                 "ipa_uk",
