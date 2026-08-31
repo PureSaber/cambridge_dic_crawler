@@ -13,6 +13,14 @@ from src.fetcher import build_url, resolve_media_url
 logger = logging.getLogger(__name__)
 
 CEFR_PATTERN = re.compile(r"\b(A1|A2|B1|B2|C1|C2)\b")
+HEADWORD_SELECTORS = (
+    ".phrase-title.dphrase-title",
+    ".idiom-title.didiom-title",
+    ".phrase-title",
+    ".idiom-title",
+    ".hw.dhw",
+    ".hw",
+)
 
 
 def parse_page(word: str, html: str) -> dict[str, Any] | None:
@@ -63,6 +71,7 @@ def parse_page(word: str, html: str) -> dict[str, Any] | None:
 
     return {
         "word": word.strip().lower(),
+        "display_word": _extract_display_word(soup, word),
         "url": build_url(word),
         "entries": entries,
     }
@@ -202,7 +211,7 @@ def _parse_example(examp: Tag) -> dict[str, str] | None:
 
 
 def _extract_clean_text(element: Tag | None) -> str:
-    """Extract text while flattening inline cross-reference links."""
+    """Extract prose without inventing spaces at inline markup boundaries."""
     if element is None:
         return ""
 
@@ -212,9 +221,37 @@ def _extract_clean_text(element: Tag | None) -> str:
         return ""
 
     for anchor in root.select("a.query, a.Ref"):
-        anchor.replace_with(anchor.get_text(" ", strip=True))
+        anchor.replace_with(anchor.get_text("", strip=False))
 
-    return _safe_text(root)
+    return _normalize_inline_text(root.get_text("", strip=False))
+
+
+def _extract_display_word(soup: BeautifulSoup, word: str) -> str:
+    """Return Cambridge's visible headword while retaining a stable slug in ``word``."""
+    fallback = word.strip().replace("-", " ")
+    requested_key = _headword_key(word)
+    candidates: list[str] = []
+
+    for selector in HEADWORD_SELECTORS:
+        for element in soup.select(selector):
+            candidate = _normalize_inline_text(element.get_text("", strip=False))
+            if candidate and candidate not in candidates:
+                candidates.append(candidate)
+
+    for candidate in candidates:
+        if _headword_key(candidate) == requested_key:
+            return candidate
+    return candidates[0] if candidates else fallback
+
+
+def _headword_key(value: str) -> str:
+    """Compare visible punctuation variants with Cambridge URL slugs."""
+    return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
+
+
+def _normalize_inline_text(text: str) -> str:
+    """Collapse real whitespace while preserving adjacent inline text nodes."""
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _extract_audio_url(entry_el: Tag, region: str) -> str:
@@ -232,7 +269,7 @@ def _extract_ipa(entry_el: Tag, region: str) -> str:
     pron_el = entry_el.select_one(f".dpron-i.{region} .pron.dpron, .dpron-i.{region} .pron")
     if not pron_el:
         return ""
-    text = _safe_text(pron_el)
+    text = _normalize_inline_text(pron_el.get_text("", strip=False))
     return text.strip("/").strip()
 
 

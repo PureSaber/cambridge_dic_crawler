@@ -15,6 +15,7 @@ def test_parse_regular_entry():
     result = parse_page("testword", _load("entry.html"))
     assert result is not None
     assert result["word"] == "testword"
+    assert result["display_word"] == "testword"
     entry = result["entries"][0]
     assert entry["pos"] == "noun"
     assert entry["ipa_uk"] == "test"
@@ -43,3 +44,27 @@ def test_parse_phrase_di_block():
 
 def test_parse_missing_content_returns_none():
     assert parse_page("missing", "<html><body></body></html>") is None
+
+
+def test_preserves_display_headword_and_inline_word_boundaries():
+    result = parse_page("may-might-as-well", _load("text_fidelity.html"))
+    assert result is not None
+    assert result["word"] == "may-might-as-well"
+    assert result["display_word"] == "may/might as well"
+    assert result["entries"][0]["ipa_us"] == "ˈlɑː.t̬ɚ.i"
+
+    sense = result["entries"][0]["senses"][0]
+    assert sense["english_definitions"] == [
+        "used to suggest doing something, often when there is nothing better to do"
+    ]
+    assert sense["chinese_definitions"] == ["（反正也没有更好的办法）要不就…"]
+    assert sense["examples"] == [
+        {
+            "english": "His story took some believing (= was difficult to believe).",
+            "chinese": "他的故事令人难以置信。",
+        },
+        {
+            "english": "I can't see her accepting (= I don't think she will accept) the job.",
+            "chinese": "我认为她不会接受。",
+        },
+    ]
